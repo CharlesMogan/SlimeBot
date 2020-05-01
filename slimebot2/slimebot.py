@@ -2,17 +2,15 @@
 import os
 import time
 import json
-import pickle
 import discord
 from dotenv import load_dotenv
 from discord.ext import commands
-from PIL import Image, ImageDraw, ImageFilter
-
-from imagetest import slime_image, get_file_name, valid_image_url
+from imagetest import slime_image, valid_image_url
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
+ADMIN_ID = os.getenv('ADMIN_ID')
 
 bot = commands.Bot(command_prefix='sb ')
 
@@ -33,11 +31,12 @@ def write_blacklist_dict_to_file():
         json.dump(black_list_dict, black_list_file_descriptor)
 
 
-class SubmissionInformation:
-
-    def __init__(self, submitter, submition_time):
-        self.submitter = submitter
-        self.time = submition_time
+async def send_image(channel, slimed_image):
+    try:
+        await channel.send("Sure thing", file=discord.File(slimed_image))
+    except discord.errors.HTTPException as e:  # mostly concerned about 413 payload too large
+        await channel.send("Sorry,  the finished image is too large. If only bots could have"
+                           " Nitro.", file=discord.File("./images/src/SlimeSorry.png"))
 
 
 @bot.event
@@ -71,8 +70,6 @@ async def on_message(message):
         return
 
     if isinstance(message.channel, discord.DMChannel):
-        print(f"I recieved a direct message!")
-        # await message.author.dm_channel.send()
         return
 
     changed_list = False
@@ -88,8 +85,7 @@ async def on_message(message):
             slime_word_dict.__delitem__(word)
             black_list_dict[word] = time.time()
             slime_image(f"{message.author.avatar_url}")
-
-            await message.channel.send(response_message, file=discord.File("./images/result.png"))
+            await send_image(message.channel, "./images/result.webp")
     if changed_list:
         write_slime_dict_to_file()
 
@@ -106,7 +102,7 @@ async def add_words(ctx):
             else:
                 word_list.remove(word)
         await ctx.send(f" You added the following words: {word_list}")
-        write_blacklist_dict_to_file()
+        write_slime_dict_to_file()
     else:
         await ctx.send(f"dm this bot a list of words in the format: addwords word1  word2  word3")
 
@@ -127,47 +123,67 @@ async def blacklist_words(ctx):
             else:
                 word_list.remove(word)
         await ctx.send(f" You added the following words to the blacklist: {word_list}")
-        write_slime_dict_to_file()
+        write_blacklist_dict_to_file()
     else:
         await ctx.send(f"dm this bot a list of words in the format: blacklistwords word1 word2 word3")
 
 
 @bot.command(name='slime', help='send me an image or a link to an image and I will silime it, to get slimed say '
                                 '\"slime me\"')
-async def add_words(ctx, *args):
+async def slime_this(ctx, *args):
     if args:
         if args[0] == "me":
             slimed_image = slime_image(f"{ctx.author.avatar_url}")
-            await ctx.channel.send("Sure thing", file=discord.File(slimed_image))
+            await send_image(ctx.channel, slimed_image)
             return
 
     for role in ctx.message.role_mentions:
         for user in role.members:
             slimed_image = slime_image(f"{user.avatar_url}")
-            await ctx.channel.send("Sure thing", file=discord.File(slimed_image))
+            await send_image(ctx.channel, slimed_image)
 
     for user in ctx.message.mentions:
         slimed_image = slime_image(f"{user.avatar_url}")
-        await ctx.channel.send("Sure thing", file=discord.File(slimed_image))
+        await send_image(ctx.channel, slimed_image)
 
     for arg in args:
         arg = str(arg).strip('<>')
         if valid_image_url(arg):
             slimed_image = slime_image(arg)
-            await ctx.channel.send("Sure thing", file=discord.File(slimed_image))
+            await send_image(ctx.channel, slimed_image)
 
     for attachment in ctx.message.attachments:
         attachment_url = attachment.url
         print(attachment_url)
         if valid_image_url(attachment_url):
             slimed_image = slime_image(attachment_url)
-            await ctx.channel.send("Sure thing", file=discord.File(slimed_image))
+            await send_image(ctx.channel, slimed_image)
+
+
+@bot.command(name='fix', help='If slime bot is not working the way you would expect, send the dev a description '
+                              'of the problem so that they can fix it, please include as much relevant'
+                              'information as you can. You may be contacted for more information by the dev.'
+                              ' Note that slimebot is running on an old computer, and may be'
+                              'very slow at times. This is in itself not considered a reportable problem')
+async def fix_me(ctx, *args):
+    if args:
+        author = ctx.message.author.mention
+        message_to_admin = f"{author} has reported the following problem: {ctx.message.content}"
+        try:
+            admin_id_int = int(ADMIN_ID)
+        except ValueError:
+            await ctx.channel.send("If you see this message it means even the error reporting is broken!!")
+        admin = bot.get_user(admin_id_int)
+        await admin.send(message_to_admin)
+        attachment_message = "the following attachments were included: "
+        for attachment in ctx.message.attachments:
+            await admin.send(f"{attachment_message}{attachment.url}")
+        return
+    await ctx.channel.send("You need to add a description of the problem!")
 
 
 bot.run(TOKEN)
 
-# fails when image 2 big
-# add to lowercase
 # add procedurly generated slime
 # add progressive sliming
 # add animated slimeq

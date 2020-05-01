@@ -5,14 +5,8 @@ from urllib.error import HTTPError
 import random
 
 from urllib.request import Request, urlopen
-import shutil
-#  rsbgv????
-import cairosvg
-import svglib
-import cairo
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image
 from shutil import copyfileobj
-from cairosvg import svg2png
 
 
 def get_file_name(url: str):
@@ -22,18 +16,13 @@ def get_file_name(url: str):
     return file_name
 
 
-# def get_unborked_url(url: str):
-#     split = urllib.parse.urlsplit(url, "/")
-#     return f"{split.netloc}{split.path}"
-
-
 def slime_image(url: str):
     file_name = get_file_name(url)
     print(file_name)
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     with urllib.request.urlopen(req) as response, open(file_name, 'wb') as out_file:
         copyfileobj(response, out_file)
-    os.system(f"gm mogrify -auto-orient {file_name}")
+    os.system(f"gm mogrify -auto-orient {file_name}")  # this reorients images based on meta info
     im1 = Image.open(file_name)
 
     width, height = im1.size
@@ -49,6 +38,10 @@ def slime_image(url: str):
     else:
         result_file = "./images/result/result.png"
         os.system(f"gm composite ./images/result/slime.png {file_name} {result_file}")
+        compressed_file = "./images/result/result.webp"
+        os.system(f"cwebp -lossless {result_file} -o {compressed_file}") # smaller lossless files
+        return compressed_file
+
     os.remove(file_name)
     return result_file
 
@@ -76,19 +69,9 @@ def valid_image_url(url: str):
 def get_random_slime_image():  # https://stackoverflow.com/questions/701402/best-way-to-choose-a-random-file-from-a-directory
     n = 0
     random.seed();
-    for root, dirs, files in os.walk('./images/src'):
+    for root, dirs, files in os.walk('./images/slimes'):
         for name in files:
             n = n + 1
             if random.uniform(0, n) < 1:
                 slime_image_path = os.path.join(root, name)
     return slime_image_path
-
-# im2 = Image.open('./images/slime1.png')
-# im = Image.alpha_composite(im1, im2)
-# im.save("./images/result", "png")
-
-
-# slime_image = Image.open("./images/slime1.svg")
-# cairosvg.svg2png(
-#     file_obj=open("./images/slime1.svg", "rb"), scale=1,
-#     write_to="./images/slime1.png")
