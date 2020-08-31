@@ -1,0 +1,23 @@
+{
+  "name": "slimebot",
+  "version": "1.0.0",
+  "description": "change me",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "watch": "tsc -p tsconfig.json -w",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Charles Mogan",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^12.12.21",
+    "discord": "^0.8.2",
+    "discord.js": "^11.5.1",
+    "dotenv": "^8.2.0",
+    "erlpack": "github:discordapp/erlpack",
+    "gm": "^1.23.1",
+    "typescript": "^3.7.3",
+    "zlib-sync": "0.1.6"
+  }
+}
