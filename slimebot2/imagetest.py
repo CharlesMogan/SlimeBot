@@ -27,20 +27,20 @@ def slime_image(url: str):
 
     width, height = im1.size
     slime_svg_path = get_random_slime_image()
-    #os.system(f"inkscape -z -e ./images/result/slime.png -w {width} -h {height} {slime_svg_path}")
-    os.system(f"inkscape -z --export-filename=./images/result/slime.png -w {width} -h {height} {slime_svg_path}")
+    #os.system(f"inkscape -z -e ./images/results/slime.png -w {width} -h {height} {slime_svg_path}")
+    os.system(f"inkscape -z --export-filename=./images/results/slime.png -w {width} -h {height} {slime_svg_path}")
 
     if im1.format == "GIF":
         if im1.is_animated:
-            result_file = "./images/result/result.gif"
-            os.system(f"convert {file_name} -coalesce null: ./images/result/slime.png -gravity center -layers "
+            result_file = "images/results/results.gif"
+            os.system(f"convert {file_name} -coalesce null: ./images/results/slime.png -gravity center -layers "
                       f"composite "
                       f"{result_file}")
 
     else:
-        result_file = "./images/result/result.png"
-        os.system(f"gm composite ./images/result/slime.png {file_name} {result_file}")
-        compressed_file = "./images/result/result.webp"
+        result_file = "images/results/results.png"
+        os.system(f"gm composite ./images/results/slime.png {file_name} {result_file}")
+        compressed_file = "images/results/results.webp"
         os.system(f"cwebp -lossless {result_file} -o {compressed_file}") # smaller lossless files
         return compressed_file
 

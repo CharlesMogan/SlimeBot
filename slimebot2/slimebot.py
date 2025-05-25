@@ -5,8 +5,7 @@ import discord
 from dotenv import load_dotenv
 from discord.ext import commands
 from imagetest import slime_image, valid_image_url
-from slimebot2.slimewords import remove_word
-from slimewords import get_slime_list,get_black_list,write_words, blacklist_words
+from slimewords import get_slime_list,get_black_list,write_words, blacklist_words, remove_word
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -78,7 +77,7 @@ async def on_message(message):
                                 f" on {submission_time}")
             remove_word(word)
             slime_image(f"{message.author.avatar.url}")
-            await send_image(message.channel, "./images/result/result.webp",response_message)
+            await send_image(message.channel, "./images/results/results.webp",response_message)
 
 
 
