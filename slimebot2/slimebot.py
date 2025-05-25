@@ -1,39 +1,38 @@
 # slimebot.py
 import os
 import time
-import json
 import discord
 from dotenv import load_dotenv
 from discord.ext import commands
 from imagetest import slime_image, valid_image_url
+from slimebot2.slimewords import remove_word
+from slimewords import get_slime_list,get_black_list,write_words, blacklist_words
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 ADMIN_ID = os.getenv('ADMIN_ID')
 
-bot = commands.Bot(command_prefix='sb ')
-
-slime_word_dict = {}
-black_list_dict = {}
-
-
-def write_slime_dict_to_file():
-    print(f"this method was called")
-    with open('slimelist.json', 'w') as slime_list_file_descriptor:
-        global slime_word_dict
-        json.dump(slime_word_dict, slime_list_file_descriptor)
-
-
-def write_blacklist_dict_to_file():
-    with open('blacklist.json', 'w') as black_list_file_descriptor:
-        global black_list_dict
-        json.dump(black_list_dict, black_list_file_descriptor)
+intents = discord.Intents.default()
+intents.typing = False
+intents.presences = False
+intents.messages = True
+intents.message_content = True
+intents.guild_messages = True
+intents.dm_messages = True
+intents.members = True
+#intents = discord.Intents.all()
+bot = commands.Bot(command_prefix='sb ', intents=intents)
 
 
-async def send_image(channel, slimed_image):
+
+
+
+
+
+async def send_image(channel, slimed_image, slime_message="Sure thing"):
     try:
-        await channel.send("Sure thing", file=discord.File(slimed_image))
+        await channel.send(slime_message, file=discord.File(slimed_image))
     except discord.errors.HTTPException as e:  # mostly concerned about 413 payload too large
         await channel.send("Sorry,  the finished image is too large. If only bots could have"
                            " Nitro.", file=discord.File("./images/src/SlimeSorry.png"))
@@ -45,12 +44,6 @@ async def on_ready():
         if guild.name == GUILD:
             break
 
-    with open('slimelist.json') as slime_list_file_descriptor, open(
-            'blacklist.json') as black_list_file_descriptor:
-        global slime_word_dict
-        global black_list_dict
-        slime_word_dict = json.load(slime_list_file_descriptor)
-        black_list_dict = json.load(black_list_file_descriptor)
 
     print(
         f'{bot.user} is connected to the following guild:\n'
@@ -63,7 +56,9 @@ async def on_ready():
 @bot.event
 async def on_message(message):
     await bot.process_commands(message)
-    if message.author == bot.user:
+    slime_word_dict = get_slime_list()
+
+    if message.author == bot.user:  # bot should not command itself
         return
 
     if message.content.split(' ')[0] == "sb":  # does nothing if the user enters a slimebot command
@@ -72,37 +67,30 @@ async def on_message(message):
     if isinstance(message.channel, discord.DMChannel):
         return
 
-    changed_list = False
     word_list = message.content.split(' ')
     for word in word_list:
         if word in slime_word_dict:
-            changed_list = True
+            #testvar3 = bot.fetch_user(testvar)
             original_submitter = bot.get_user(slime_word_dict[word]["id"]).mention
             submission_time = time.ctime(slime_word_dict[word]["time"])
             response_message = (f"{message.author.mention} said the slimeword: {word}!\n"
                                 f" it was added by {original_submitter}"
                                 f" on {submission_time}")
-            slime_word_dict.__delitem__(word)
-            black_list_dict[word] = time.time()
-            slime_image(f"{message.author.avatar_url}")
-            await send_image(message.channel, "./images/result.webp")
-    if changed_list:
-        write_slime_dict_to_file()
+            remove_word(word)
+            slime_image(f"{message.author.avatar.url}")
+            await send_image(message.channel, "./images/result/result.webp",response_message)
+
 
 
 @bot.command(name='addwords', help='dm this bot a list of words in the format: "addwords word1 word2 word3"')
 async def add_words(ctx):
+    slime_word_dict = get_slime_list()
+    print(f'adding word')
     if isinstance(ctx.channel, discord.DMChannel):
         word_list = ctx.message.content.split(' ')
         del word_list[0:2]  # removes the command words
-        for word in word_list:
-            if word not in slime_word_dict and word not in black_list_dict:
-                submission_info = {"id": ctx.author.id, "time": time.time()}
-                slime_word_dict[word] = submission_info
-            else:
-                word_list.remove(word)
+        write_words(word_list, ctx.author.id)   #fixme why does it want this awaited???
         await ctx.send(f" You added the following words: {word_list}")
-        write_slime_dict_to_file()
     else:
         await ctx.send(f"dm this bot a list of words in the format: addwords word1  word2  word3")
 
@@ -110,20 +98,12 @@ async def add_words(ctx):
 @bot.command(name='blacklistwords', help='dm this bot a list of words to blacklist, this words will be removed from '
                                          'the slime list pool and not addable again: "blacklistwords word1, word2, '
                                          'word3"')
-async def blacklist_words(ctx):
+async def blacklist_words_command(ctx):
     if isinstance(ctx.channel, discord.DMChannel):
         word_list = ctx.message.content.split(' ')
         del word_list[0:2]  # removes the command words
-        for word in word_list:
-            if word not in black_list_dict:
-                submission_info = {"id": ctx.author.id, "time": time.time()}
-                black_list_dict[word] = submission_info
-                if word in slime_word_dict:
-                    slime_word_dict.__delitem__(word)
-            else:
-                word_list.remove(word)
+        blacklist_words(word_list,ctx.author.id)
         await ctx.send(f" You added the following words to the blacklist: {word_list}")
-        write_blacklist_dict_to_file()
     else:
         await ctx.send(f"dm this bot a list of words in the format: blacklistwords word1 word2 word3")
 
@@ -131,19 +111,20 @@ async def blacklist_words(ctx):
 @bot.command(name='slime', help='send me an image or a link to an image and I will silime it, to get slimed say '
                                 '\"slime me\"')
 async def slime_this(ctx, *args):
+    print(f'sliming')
     if args:
         if args[0] == "me":
-            slimed_image = slime_image(f"{ctx.author.avatar_url}")
+            slimed_image = slime_image(f"{ctx.author.avatar.url}")
             await send_image(ctx.channel, slimed_image)
             return
 
     for role in ctx.message.role_mentions:
         for user in role.members:
-            slimed_image = slime_image(f"{user.avatar_url}")
+            slimed_image = slime_image(f"{user.avatar.url}")
             await send_image(ctx.channel, slimed_image)
 
     for user in ctx.message.mentions:
-        slimed_image = slime_image(f"{user.avatar_url}")
+        slimed_image = slime_image(f"{user.avatar.url}")
         await send_image(ctx.channel, slimed_image)
 
     for arg in args:
