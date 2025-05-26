@@ -29,8 +29,6 @@ def write_words(words,adder):
         if word not in slime_word_dict and word not in black_list_dict:
             submission_info = {"id": adder, "time": time.time()}
             slime_word_dict[word] = submission_info
-        #else:
-        #    word.remove(word)   #fixme I dont think this is right
     write_slime_dict_to_file(slime_word_dict)
 
 def blacklist_words(words,blacklister):
@@ -43,8 +41,6 @@ def blacklist_words(words,blacklister):
             black_list_dict[word] = submission_info
             if word in slime_word_dict:
                 slime_word_dict.__delitem__(word)
-        #else:
-        #    words.remove(word)
     write_blacklist_dict_to_file(black_list_dict)
 
 
