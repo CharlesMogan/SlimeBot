@@ -78,29 +78,43 @@ async def on_message(message):
 
 
 
-@bot.command(name='addwords', help='dm this bot a list of words in the format: "addwords word1 word2 word3"')
+@bot.command(name='addwords', help='send list of words in the format: "addwords word1 word2 word3"')
 async def add_words_command(ctx):
     print(f'adding word')
-    if not isinstance(ctx.channel, discord.DMChannel):
-        word_list = ctx.message.content.split(' ')
-        del word_list[0:2]  # removes the command words
-        add_words(word_list, ctx.author, ctx.guild)
-        await ctx.send(f" You added the following words: {word_list}")
-    else:
+    if isinstance(ctx.channel, discord.DMChannel):
         await ctx.send(f"words cannot be added via DM")
+        return
+
+    word_list = ctx.message.content.split(' ')
+    del word_list[0:2]  # removes the command words
+    added_words, unadded_words = add_words(word_list, ctx.author, ctx.guild)
+    response_message = ''
+    if added_words:
+        response_message = f" You added the following words: {added_words}\n"
+    if unadded_words:
+        response_message += f" Can not add the following words: {unadded_words}\n"
+    await ctx.send(response_message)
 
 
-@bot.command(name='blacklistwords', help='dm this bot a list of words to blacklist, this words will be removed from '
-                                         'the slime list pool and not addable again: "blacklistwords word1, word2, '
+
+@bot.command(name='diswords', help='send a list of words to dissallow, these words will not be triggerable '
+                                         'and will not be addable to the slimelist word pool: "diswords word1, word2, '
                                          'word3"')
 async def blacklist_words_command(ctx):
+
     if isinstance(ctx.channel, discord.DMChannel):
-        word_list = ctx.message.content.split(' ')
-        del word_list[0:2]  # removes the command words
-        disallow_words(word_list,ctx.author.id)
-        await ctx.send(f" You added the following words to the blacklist: {word_list}")
-    else:
-        await ctx.send(f"dm this bot a list of words in the format: blacklistwords word1 word2 word3")
+        await ctx.send(f"words cannot be added via DM")
+        return
+
+    word_list = ctx.message.content.split(' ')
+    del word_list[0:2]  # removes the command words
+    added_words, unadded_words = disallow_words(word_list,ctx.author, guild=ctx.guild)
+    response_message = ''
+    if added_words:
+        response_message += f" The following words are now disallowed: {added_words}\n"
+    if unadded_words:
+        response_message += f" The following words were already disallowed: {unadded_words}\n"
+    await ctx.send(response_message)
 
 
 @bot.command(name='slime', help='send me an image or a link to an image and I will silime it, to get slimed say '
